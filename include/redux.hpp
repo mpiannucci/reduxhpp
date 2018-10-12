@@ -56,21 +56,23 @@ class Store {
 		dispatch(action); 
 	}
 
-	void subscribe(const std::shared_ptr<Subscriber>& new_subscriber) {
+	void subscribe(const std::weak_ptr<Subscriber>& new_subscriber) {
 		auto existing_subscriber = std::find_if(m_subscribers.begin(), m_subscribers.end(), [&new_subscriber](const std::weak_ptr<Subscriber> weak_subscriber){
-			return weak_subscriber.lock() == new_subscriber;
+			return weak_subscriber.lock() == new_subscriber.lock();
 		});
 		if (existing_subscriber != m_subscribers.end()) {
 			return;
 		}
 
 		m_subscribers.push_back(new_subscriber);
-		new_subscriber->new_state(m_state);
+		if (auto subscriber = new_subscriber.lock()) {
+			subscriber->new_state(m_state);
+		}
 	}
 
-	void unsubscribe(const std::shared_ptr<Subscriber>& subscriber) {
+	void unsubscribe(const std::weak_ptr<Subscriber>& subscriber) {
 		auto existing_subscriber = std::find_if(m_subscribers.begin(), m_subscribers.end(), [&subscriber](const std::weak_ptr<Subscriber> weak_subscriber){
-			return weak_subscriber.lock() == subscriber;
+			return weak_subscriber.lock() == subscriber.lock();
 		});
 		if (existing_subscriber == m_subscribers.end()) {
 			return;
