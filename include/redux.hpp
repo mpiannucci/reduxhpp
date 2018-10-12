@@ -57,7 +57,9 @@ class Store {
 	}
 
 	void subscribe(const std::shared_ptr<Subscriber>& new_subscriber) {
-		auto existing_subscriber = std::find(m_subscribers.begin(), m_subscribers.end(), new_subscriber);
+		auto existing_subscriber = std::find_if(m_subscribers.begin(), m_subscribers.end(), [&new_subscriber](const std::weak_ptr<Subscriber> weak_subscriber){
+			return weak_subscriber.lock() == new_subscriber;
+		});
 		if (existing_subscriber != m_subscribers.end()) {
 			return;
 		}
@@ -67,7 +69,9 @@ class Store {
 	}
 
 	void unsubscribe(const std::shared_ptr<Subscriber>& subscriber) {
-		auto existing_subscriber = std::find(m_subscribers.begin(), m_subscribers.end(), subscriber);
+		auto existing_subscriber = std::find_if(m_subscribers.begin(), m_subscribers.end(), [&subscriber](const std::weak_ptr<Subscriber> weak_subscriber){
+			return weak_subscriber.lock() == subscriber;
+		});
 		if (existing_subscriber == m_subscribers.end()) {
 			return;
 		}
@@ -77,14 +81,16 @@ class Store {
 
   private:
   	void notify_subscriptions() {
-  		for (auto subscriber : m_subscribers) {
-  			subscriber->new_state(m_state);
+  		for (auto weak_subscriber : m_subscribers) {
+            if (auto subscriber = weak_subscriber.lock()) {
+  			    subscriber->new_state(m_state);
+            }
   		}
   	}
 
     T m_state;
     Reducer m_reducer;
-    std::vector<std::shared_ptr<Subscriber>> m_subscribers;
+    std::vector<std::weak_ptr<Subscriber>> m_subscribers;
 };
 
 }
